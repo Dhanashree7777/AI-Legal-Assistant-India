@@ -32,7 +32,7 @@ class IndianLegalAssistantAgent:
             model="llama-3.3-70b-versatile",
             temperature=0.1,
             max_tokens=1024
-        )
+        )   
         self.tools = [get_legal_document_data]
         self.tools_by_names = {t.name: t for t in self.tools}
         self.llm_with_tools = self.llm.bind_tools(self.tools)

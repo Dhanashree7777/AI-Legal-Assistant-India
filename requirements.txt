@@ -9,3 +9,5 @@ google-search-results
 chromadb
 faiss-cpu
 pypdf
+fastapi
+uvicorn
