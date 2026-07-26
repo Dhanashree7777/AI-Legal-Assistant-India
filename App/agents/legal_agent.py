@@ -1,8 +1,11 @@
 import os
+import sys
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, ToolMessage
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the RAGService from your services folder
 from services.rag_service import RAGService
