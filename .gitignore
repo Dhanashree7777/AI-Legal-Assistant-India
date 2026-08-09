@@ -1,15 +1,7 @@
 .env
-
 __pycache__/
-
-.venv/
-myenv/
-env311/
 env/
-
-legal_vector_db/
-test_chroma_db/
-db_v2/
+myenv/
 legal_faiss_db/
 *.sqlite3
 *.faiss

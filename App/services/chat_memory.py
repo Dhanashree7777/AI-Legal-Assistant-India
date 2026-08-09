@@ -32,3 +32,4 @@ class ChatMemory:
         return list(self.history)
 
 memory = ChatMemory()
+

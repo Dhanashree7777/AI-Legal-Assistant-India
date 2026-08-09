@@ -1,6 +1,11 @@
 from fastapi import FastAPI
 from langchain_core.messages import HumanMessage
 from App.workflows.legal_workflow import workflow
+# Add this to your imports at the top of main.py
+from App.services.chat_memory import ChatMemory
+
+# Initialize memory globally (place this somewhere near the top, before your endpoints)
+chat_memory = ChatMemory()
 
 app = FastAPI(
     title="AI Legal Assistant API", 
@@ -80,5 +85,21 @@ def delete_all_items() -> dict:
 
 @app.post("/execute-workflow")
 def process_workflow(query: str):
-    result = workflow.invoke({"messages": [HumanMessage(content=query)]})
-    return {"response": result["messages"][-1].content}
+    context = chat_memory.get_context()
+    
+    if context:
+        full_prompt = f"Here is our recent conversation history:\n{context}\n\nNow, please answer this follow-up question based on Indian Law: {query}"
+    else:
+        full_prompt = query
+
+    result = workflow.invoke({"messages": [HumanMessage(content=full_prompt)]})
+    
+    final_answer = result["messages"][-1].content
+    
+    chat_memory.add(question=query, answer=final_answer)
+    return final_answer
+
+@app.post("/clear-memory")
+def clear_memory():
+    chat_memory.clear()
+    return {"message": "Conversation history has been successfully cleared."}
