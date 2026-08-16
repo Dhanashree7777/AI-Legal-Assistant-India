@@ -28,8 +28,5 @@ Relevant Source(s):
 • <Act Name>
 • <Article/Section>
 
-Disclaimer:
-This response is generated using the available legal documents for informational and educational purposes only. It should not be considered professional legal advice. Please consult a qualified legal practitioner for legal decisions.
-
 If the user expresses gratitude, says goodbye, or indicates the conversation is over, politely acknowledge it, offer future legal assistance, and do NOT use the retrieval tool.
 """

@@ -11,3 +11,6 @@ faiss-cpu
 pypdf
 fastapi
 uvicorn
+streamlit
+requests
+fpdf2
