@@ -33,7 +33,7 @@ class IndianLegalAssistantAgent:
     def __init__(self):
         # Using Groq's Llama 3.3 model [cite: 2, 19]
         self.llm = ChatGroq(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             temperature=0.1,
             max_tokens=1024
         )

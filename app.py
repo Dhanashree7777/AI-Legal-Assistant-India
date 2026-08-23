@@ -1,4 +1,3 @@
-#from langchain_groq import data
 import streamlit as st
 import requests
 import datetime
@@ -7,7 +6,10 @@ from fpdf import FPDF
 # ---------------------------------------------------------
 # PDF Generation Helper Function
 # ---------------------------------------------------------
-def generate_pdf(query, answer):
+# ---------------------------------------------------------
+# PDF Generation Helper Function (UPDATED FOR FULL CHAT)
+# ---------------------------------------------------------
+def generate_pdf(messages):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -22,24 +24,27 @@ def generate_pdf(query, answer):
     pdf.cell(0, 8, "Jurisdiction: Republic of India", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
     
-    # Query Section
+    # Chat History Section
     pdf.set_font("helvetica", style="B", size=12)
-    pdf.cell(0, 10, "CASE SUMMARY / QUERY:", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("helvetica", size=11)
-    
-    # Encode to handle potential special characters gracefully
-    safe_query = query.encode('latin-1', 'replace').decode('latin-1')
-    pdf.multi_cell(0, 8, safe_query)
+    pdf.cell(0, 10, "FULL CASE HISTORY & ANALYSIS:", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
-    
-    # Analysis Section
-    pdf.set_font("helvetica", style="B", size=12)
-    pdf.cell(0, 10, "LEGAL ANALYSIS & PROVISIONS:", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("helvetica", size=11)
-    
-    safe_answer = answer.encode('latin-1', 'replace').decode('latin-1')
-    pdf.multi_cell(0, 8, safe_answer)
-    pdf.ln(10)
+
+    # Loop through the entire conversation memory
+    for msg in messages:
+        # Determine if it's the User or the AI
+        role_title = "USER (QUERY):" if msg["role"] == "user" else "AI LEGAL ASSISTANT (ANALYSIS):"
+        content = msg["content"]
+        
+        # Print the Role Title
+        pdf.set_font("helvetica", style="B", size=11)
+        pdf.cell(0, 8, role_title, new_x="LMARGIN", new_y="NEXT")
+        
+        # Print the Content
+        pdf.set_font("helvetica", size=11)
+        # Encode to handle potential special characters gracefully
+        safe_content = content.encode('latin-1', 'replace').decode('latin-1')
+        pdf.multi_cell(0, 8, safe_content)
+        pdf.ln(5)
     
     # Disclaimer
     pdf.set_font("helvetica", style="I", size=10)
@@ -61,6 +66,7 @@ st.set_page_config(page_title="Indian Legal AI", page_icon="🏛️", layout="ce
 # ---------------------------------------------------------
 API_URL = "http://127.0.0.1:8000/execute-workflow"
 CLEAR_MEMORY_URL = "http://127.0.0.1:8000/clear-memory"
+UPLOAD_URL = "http://127.0.0.1:8000/upload-document"
 
 # ---------------------------------------------------------
 # Page Title
@@ -69,7 +75,7 @@ st.title("⚖️ AI Legal Assistant for Indian Laws")
 st.markdown("Ask me anything about the Constitution, BNS, or other Indian laws.")
 
 # ---------------------------------------------------------
-# Sidebar
+# Sidebar: Settings & Document Upload
 # ---------------------------------------------------------
 with st.sidebar:
     st.header("⚙️ Settings")
@@ -78,12 +84,38 @@ with st.sidebar:
             response = requests.post(CLEAR_MEMORY_URL, timeout=10)
             if response.status_code == 200:
                 st.session_state.messages = []
-                st.session_state.latest_pdf = None # Clear PDF memory too
+                st.session_state.latest_pdf = None
                 st.success("Memory cleared! Ready for a new case.")
             else:
                 st.error(f"Failed to clear memory: {response.status_code}")
         except requests.exceptions.ConnectionError:
             st.error("Could not connect to FastAPI backend.")
+
+    st.markdown("---")
+    st.header("📂 Ingest Legal Document")
+    uploaded_file = st.file_uploader("Upload a Bare Act or Legal PDF", type=["pdf"])
+
+    if uploaded_file is not None:
+        if st.button(f"📥 Process {uploaded_file.name}"):
+            with st.spinner(f"Ingesting and indexing {uploaded_file.name}... (This may take a few moments due to API batching)"):
+                try:
+                    files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")}
+                    upload_response = requests.post(UPLOAD_URL, files=files, timeout=600)
+
+                    if upload_response.status_code == 200:
+                        res_json = upload_response.json()
+                        if res_json.get("status") == "success":
+                            st.success(res_json.get("message"))
+                        else:
+                            st.error(res_json.get("message", "Upload failed."))
+                    else:
+                        st.error(f"Server returned HTTP {upload_response.status_code}")
+                except requests.exceptions.ConnectionError:
+                    st.error("Backend server is not running.")
+                except requests.exceptions.Timeout:
+                    st.error("The document ingestion timed out. Check backend terminal.")
+                except Exception as e:
+                    st.error(f"Error during upload: {e}")
 
 # ---------------------------------------------------------
 # Initialize Streamlit Chat & PDF Memory
@@ -106,12 +138,9 @@ for message in st.session_state.messages:
 # Chat Input
 # ---------------------------------------------------------
 if prompt := st.chat_input("E.g., What is Section 318 of the BNS?"):
-    
-    # Display User Question
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Call FastAPI Backend
     with st.spinner("Searching the Vector Database and Analyzing Laws..."):
         try:
             response = requests.post(API_URL, json={"query": prompt}, timeout=120)
@@ -122,16 +151,14 @@ if prompt := st.chat_input("E.g., What is Section 318 of the BNS?"):
                 if bot_reply.get("status") == "success":
                     answer = bot_reply.get("answer", "Sorry, I could not generate an answer.")
                     
-                    # Display answer
                     with st.chat_message("assistant"):
                         st.markdown(answer)
 
-                    # Save assistant response
                     st.session_state.messages.append({"role": "assistant", "content": answer})
                     
-                    # --- GENERATE PDF AND SAVE TO MEMORY ---
-                    st.session_state.latest_pdf = generate_pdf(prompt, answer)
-                    st.session_state.latest_pdf_name = f"Legal_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                    # --- GENERATE PDF OF ENTIRE CHAT AND SAVE TO MEMORY ---
+                    st.session_state.latest_pdf = generate_pdf(st.session_state.messages)
+                    st.session_state.latest_pdf_name = f"Full_Legal_History_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
 
                 else:
                     error_message = bot_reply.get("message", "The backend returned an error.")
@@ -150,9 +177,8 @@ if prompt := st.chat_input("E.g., What is Section 318 of the BNS?"):
             st.error(f"Unexpected error: {e}")
 
 # ---------------------------------------------------------
-# Persistent Download Button (Outside the chat loop!)
+# Persistent Download Button
 # ---------------------------------------------------------
-# Because this is OUTSIDE the chat input block, it will survive reruns!
 if st.session_state.latest_pdf is not None:
     st.markdown("---")
     st.download_button(
