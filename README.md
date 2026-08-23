@@ -51,3 +51,37 @@ A Retrieval-Augmented Generation (RAG) system designed to answer queries on Indi
     ```
 4. Export dependencies: 
     ```pip freeze > requirements.txt```
+
+## Project Structure
+```
+AI Legal Assistant for Indian Laws/
+├── App/
+│   ├── __pycache__/
+│   ├── agents/
+│   │   ├── __pycache__/
+│   │   └── legal_agent.py
+│   ├── prompts/
+│   │   ├── __pycache__/
+│   │   └── legal_prompt.py
+│   ├── services/
+│   │   ├── __pycache__/
+│   │   ├── chat_memory.py
+│   │   └── rag_service.py
+│   ├── workflows/
+│   │   ├── __pycache__/
+│   │   └── legal_workflow.py
+│   └── main.py
+├── data/
+│   ├── bns.pdf
+│   ├── bnss.pdf
+│   ├── bsa.pdf
+│   ├── constitution_of_India.pdf
+│   └── it_act.pdf
+├── env/
+├── legal_faiss_db/
+├── .env
+├── .gitignore
+├── app.py
+├── README.md
+└── requirements.txt
+```
