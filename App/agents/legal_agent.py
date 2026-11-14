@@ -31,7 +31,6 @@ def get_legal_document_data(query: str):
 
 class IndianLegalAssistantAgent:
     def __init__(self):
-        # Using Groq's Llama 3.3 model [cite: 2, 19]
         self.llm = ChatGroq(
             model="openai/gpt-oss-20b",
             temperature=0.1,
