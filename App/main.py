@@ -7,6 +7,9 @@ from langchain_core.messages import HumanMessage
 from App.workflows.legal_workflow import workflow
 from App.services.chat_memory import ChatMemory
 from App.services.rag_service import RAGService
+from pathlib import Path
+from fastapi import HTTPException
+from uuid import uuid4
 
 # ---------------------------------------------------------
 # Request Model
@@ -41,7 +44,7 @@ def root() -> dict:
 
 @app.get("/health")
 def health_check() -> dict:
-    return {"status": "OK"}
+    return {"status": "running", "vector_database_loaded": rag_service.vector_store is not None}
 
 
 # ---------------------------------------------------------
@@ -88,9 +91,23 @@ def delete_all_items() -> dict:
 # ---------------------------------------------------------
 # Document Upload & Ingestion Endpoint
 # ---------------------------------------------------------
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 @app.post("/upload-document")
 async def upload_document(file: UploadFile = File(...)):
-    try:
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE: 
+        raise HTTPException(status_code= 413, detail="File size exceeds the maximum limit of 10MB.")
+    if not content.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail="Uploaded file is not a valid PDF.")
+    safe_name = f"{uuid4().hex}.pdf"
+    os.makedirs("./data/uploads", exist_ok=True)
+    file_path = os.path.join("./data/uploads", safe_name)
+    with open(file_path, "wb") as f: f.write(content)
+    result = rag_service.process_and_create_embeddings(file_path)
+    return result
+    try:           
         os.makedirs("./data", exist_ok=True)
         file_path = os.path.join("./data", file.filename)
 
@@ -160,13 +177,7 @@ def process_workflow(request: QueryRequest):
             "status": "success"
         }
 
-    except Exception as e:
-        return {
-            "answer": "",
-            "sources": [],
-            "status": "error",
-            "message": str(e)
-        }
+    except Exception: raise HTTPException(status_code=500, detail="An error occurred while processing the workflow.")
 
 
 # ---------------------------------------------------------

@@ -1,7 +1,10 @@
+import os
+
 import streamlit as st
 import requests
 import datetime
 from fpdf import FPDF
+
 
 
 # =========================================================
@@ -32,6 +35,15 @@ UPLOAD_URL = "http://127.0.0.1:8000/upload-document"
 def generate_pdf(messages):
 
     pdf = FPDF()
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    FONT_PATH = os.path.join(
+    BASE_DIR,
+    "fonts",
+    "DejaVuSans.ttf"
+)
+
+    st.pdf.add_font("DejaVu", "", FONT_PATH)
 
     pdf.add_page()
 
@@ -42,7 +54,7 @@ def generate_pdf(messages):
 
     # Header
     pdf.set_font(
-        "helvetica",
+        "DejaVu",
         style="B",
         size=16
     )
@@ -50,7 +62,7 @@ def generate_pdf(messages):
     pdf.cell(
         0,
         10,
-        "OFFICIAL LEGAL ADVISORY REPORT",
+        "AI GENERATED LEGAL INFORMATION REPORT",
         align="C",
         new_x="LMARGIN",
         new_y="NEXT"
@@ -58,7 +70,7 @@ def generate_pdf(messages):
 
     # Date
     pdf.set_font(
-        "helvetica",
+        "DejaVu",
         size=10
     )
 
@@ -85,7 +97,7 @@ def generate_pdf(messages):
 
     # Chat history heading
     pdf.set_font(
-        "helvetica",
+        "DejaVu",
         style="B",
         size=12
     )
@@ -129,16 +141,12 @@ def generate_pdf(messages):
             size=11
         )
 
-        safe_content = (
-            content
-            .encode("latin-1", "replace")
-            .decode("latin-1")
-        )
+        pdf.multi_cell(0, 8, content)
 
         pdf.multi_cell(
             0,
             8,
-            safe_content
+            content
         )
 
         pdf.ln(5)
@@ -389,11 +397,12 @@ def ask_backend(question):
 
 with st.sidebar:
 
-    st.markdown(
-        "<div style='font-size:28px;font-weight:800;color:white;'>⚖️ NyayaAI</div>"
-        "<div style='font-size:12px;color:#64748b;margin-bottom:25px;'>AI Legal Intelligence Platform</div>",
-        unsafe_allow_html=True
-    )
+    try: 
+        response = requests.get( "http://localhost:8000/health", timeout=5)
+        if response.status_code == 200: st.success ("backend connected")
+        else: st.error("backend not connected")
+    except requests.exceptions.RequestExceptions: st.error("backend not connected")
+   
 
     # System status
     st.markdown(

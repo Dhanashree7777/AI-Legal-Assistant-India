@@ -15,3 +15,5 @@ streamlit
 requests
 fpdf2
 python-multipart
+langchain-text-splitters
+langgraph 

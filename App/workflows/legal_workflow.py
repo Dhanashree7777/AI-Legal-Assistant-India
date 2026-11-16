@@ -83,3 +83,14 @@ if __name__ == "__main__":
     print(output)
 
     print("\n\n-------------------------END DEBUGGING HERE-----------------\n\n")
+
+# result = workflow.invoke(
+#     {
+#         "messages": [
+#             HumanMessage(content=full_prompt)
+#         ]
+#     },
+#     config={
+#         "recursion_limit": 10
+#     }
+# )

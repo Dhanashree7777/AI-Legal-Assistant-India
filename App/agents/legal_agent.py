@@ -22,9 +22,28 @@ def get_legal_document_data(query: str):
     """
     try:
         rag_service = RAGService()
+        @tool
+        def get_legal_document_data(query: str):
+            """
+            Retrieve relevant information from Indian legal documents including
+            Constitution of India, BNS, BNSS, BSA and the IT Act.
+            """
+            try:
+                retriever = rag_service.get_retriever()
+                docs = retriever.invoke(query)
+                return docs
+            except Exception as e:
+                return f"Retrieval Error: {e}"
         retriever = rag_service.get_retriever()
         docs = retriever.invoke(query)
-        return docs
+        return [
+            {
+                "content": doc.page_content,
+                "source": doc.metadata.get("source"),
+                "page": doc.metadata.get("page")
+            }
+            for doc in docs
+        ]
     except Exception as e:
         return f"Retrieval Error: {e}"
 
